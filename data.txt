@@ -1,0 +1,373 @@
+// https://dzone.com/articles/distance-calculation-using-3 - distance functions from
+import java.io.*;
+import java.util.*;
+
+
+public class Runner {
+    static HashMap<String, List<Airport>> airports = new HashMap<>();
+    static HashMap<String, List<Airline>> airlines = new HashMap<>();
+    static HashMap<String, List<Route>> routes = new HashMap<>();
+    static HashMap<String, List<String>> airport_adjacency_list = new HashMap<>();
+    static List<Airport> all_airports = new ArrayList<>();
+
+    public static void airport_reader(String csv_file) throws IOException {
+        String ap_name = "";
+
+        BufferedReader inputStream = new BufferedReader(new FileReader(csv_file));
+        String line = inputStream.readLine();
+
+        while (line != null) {
+            if (line.contains("\"")) {
+                ap_name = line.substring(line.indexOf("\"") + 1, line.lastIndexOf("\""));
+                line = line.substring(0, line.indexOf("\"")) + line.substring(line.lastIndexOf("\"") + 1);
+//                System.out.println(ap_name);
+//                System.out.println(line);
+            }
+
+            String[] data = line.split(",");
+            String airport_ID = data[0];
+            String name = ap_name.isEmpty() ? data[1] : ap_name;
+            String city = data[2];
+            String country = data[3];
+            String IATA = data[4];
+            String ICAO = data[5];
+            String latitude = (data[6]);
+            String longitude = (data[7]);
+            String altitude = (data[8]);
+            String timezone = (data[9]);
+            String DST = data[10];
+            String tz = data[11];
+            String type = data[12];
+            String source = data[13];
+
+            Airport new_airport = new Airport(airport_ID, name, city,
+                    country, IATA, ICAO, latitude, longitude, altitude,
+                    timezone, DST, tz, type, source);
+
+            all_airports.add(new_airport);
+
+            if (airports.containsKey(new_airport.City)) {
+                airports.get(new_airport.City).add(new_airport);
+            } else {
+                ArrayList<Airport> new_airport_list = new ArrayList<>();
+                new_airport_list.add(new_airport);
+                airports.put(new_airport.City, new_airport_list);
+            }
+            line = inputStream.readLine();
+        }
+        inputStream.close();
+
+    }
+
+    public static HashMap airline_reader(String csv_file) throws IOException {
+
+
+        BufferedReader inputStream = new BufferedReader(new FileReader(csv_file));
+        String line = inputStream.readLine();
+
+        while (line != null) {
+
+            String[] data = line.split(",");
+
+            String airline_ID = data[0];
+            String name = data[1];
+            String alias = data[2];
+            String IATA = data[3];
+            String ICAO = data[4];
+            String callsign = data[5];
+            String country = data[6];
+            String active = data[7];
+
+            Airline new_airline = new Airline(airline_ID, name, alias, IATA,
+                    ICAO, callsign, country, active);
+
+            if (airlines.containsKey(new_airline.Airline_ID)) {
+                airlines.get(new_airline.Airline_ID).add(new_airline);
+            } else {
+                ArrayList<Airline> new_airline_list = new ArrayList<>();
+                new_airline_list.add(new_airline);
+                airlines.put(new_airline.Airline_ID, new_airline_list);
+            }
+        }
+
+        inputStream.close();
+
+        return airlines;
+    }
+
+    public static HashMap route_reader(String csv_file) throws IOException {
+
+        String Eq = "";
+        BufferedReader inputStream = new BufferedReader(new FileReader(csv_file));
+        String line = inputStream.readLine();
+
+        while (line != null) {
+
+            String[] data = line.split(",");
+            if (line.split(",").length < 9)
+                Eq = "/N";
+
+            String airline_code = data[0];
+            String airline_ID = data[1];
+            String source_airport_code = data[2];
+            String source_airport_ID = data[3];
+            String destination_airport_code = data[4];
+            String destination_airport_ID = data[5];
+            String codeshare = data[6];
+            String stops = data[7];
+            String equipment = Eq.isEmpty() ? data[8] : Eq;
+
+            Route new_route = new Route(airline_code, airline_ID,
+                    source_airport_code, source_airport_ID,
+                    destination_airport_code, destination_airport_ID,
+                    codeshare, stops, equipment);
+
+            if (routes.containsKey(new_route.Source_airport_code)) {
+                routes.get(new_route.Source_airport_code).add(new_route);
+            } else {
+                ArrayList<Route> new_route_list = new ArrayList<>();
+                new_route_list.add(new_route);
+                routes.put(new_route.Source_airport_code, new_route_list);
+            }
+
+            if (airport_adjacency_list.containsKey(new_route.Source_airport_ID)){
+                airport_adjacency_list.get(new_route.Source_airport_ID).add(new_route.Destination_airport_ID);
+
+            }else{
+                ArrayList<String> possible_destinations = new ArrayList<>();
+                possible_destinations.add(new_route.Destination_airport_ID);
+                airport_adjacency_list.put(new_route.Source_airport_ID, possible_destinations);
+            }
+
+
+
+
+            line = inputStream.readLine();
+        }
+        inputStream.close();
+
+        return routes;
+    }
+
+    public static String[] trip(String txt_file) throws IOException {
+        BufferedReader inputStream = new BufferedReader(new FileReader(txt_file));
+
+        String line = inputStream.readLine();
+        ArrayList<String> city = new ArrayList<>();
+        ArrayList<String> country = new ArrayList<>();
+
+        while (line != null) {
+
+            city.add(line.split(",")[0]);
+            country.add(line.split(",")[1]);
+
+            line = inputStream.readLine();
+        }
+        String start_city = city.get(0);
+        String dest_city = city.get(1);
+        String start_country = country.get(0);
+        String dest_country = country.get(1);
+        String location[] = {start_city, start_country, dest_city, dest_country};
+
+        return location;
+
+    }
+
+    public static List<Airport> get_airport(String city) {
+        return airports.get(city);
+    }
+
+
+    public  static boolean is_active_flight(String airline_id){
+        for (Map.Entry<String, List<Airline>> entry : airlines.entrySet()){
+            for (Airline airline: entry.getValue()){
+                if (airline.Airline_ID.equals(airline_id) && airline.Airline_ID.equals("Y")){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+
+    public static boolean has_direct_flight(String start_IATA, String dest_IATA) {
+        List<Route> destination = routes.get(start_IATA);
+        for (Route route : destination) {
+            if (dest_IATA.equals(route.Destination_airport_code) && is_active_flight(route.Airline_ID))
+                return true;
+        }
+        return false;
+    }
+
+
+    public static boolean valid_solution_path_found(List<String> flights, HashMap routeList) {
+        int count = 0;
+        int i = 0;
+
+        while (i < flights.size() - 1) {
+            if (has_direct_flight(flights.get(i), flights.get(i + 1)) && i + 1 < flights.size())
+                count++;
+            i++;
+            ;
+        }
+
+        return count == flights.size() - 1;
+    }
+
+
+    public static double distance(double lat1, double lon1, double lat2, double lon2) {
+        double theta = lon1 - lon2;
+        double dist = Math.sin(deg2rad(lat1)) * Math.sin(deg2rad(lat2)) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.cos(deg2rad(theta));
+        dist = Math.acos(dist);
+        dist = rad2deg(dist);
+        dist = dist * 60 * 1.1515;
+        dist = dist * 1.609344;
+        return (dist);
+    }
+
+
+    private static double deg2rad(double deg) {
+        return (deg * Math.PI / 180.0);}
+
+
+    private static double rad2deg(double rad) {
+        return (rad * 180.0 / Math.PI);
+    }
+
+
+
+    public static void main(String[] args) throws IOException {
+
+        double start_lat = 0;
+        double start_long = 0;
+        double dest_lat = 0;
+        double dest_long = 0;
+        String start_city = trip("trip.txt")[0];
+        String dest_city = trip("trip.txt")[2];
+
+        // Step1: parsing the datafiles
+        airport_reader("airports.csv");
+        airline_reader("airlines.csv");
+        route_reader("routes.csv");
+        trip("trip.txt");
+
+        // Step 2: Query data for trip
+        List<Airport> start_port_list = get_airport(start_city);
+        List<Integer> airport_in_start_city = new ArrayList<>();
+        for(Airport airport : start_port_list) {
+
+            airport_in_start_city.add(Integer.parseInt(airport.Airport_ID));
+        }
+
+        List<Airport> dest_port_list = get_airport(dest_city);
+        List<Integer> airport_in_dest_city = new ArrayList<>();
+        for(Airport airport : dest_port_list) {
+            airport_in_dest_city.add(Integer.parseInt(airport.Airport_ID));
+        }
+
+
+        // Step 3 Graph and searching algorithm
+        Graph graph = new Graph();
+        // add vetices
+        for (Map.Entry<String, List<Airport>> ap : airports.entrySet()) {
+            for (Airport airport : ap.getValue()) {
+                if ( !airport.IATA.contains("\\")) {
+                    Integer airport_id = Integer.parseInt(airport.Airport_ID);
+                    String IATA = airport.IATA;
+                    graph.addVertex(airport_id, IATA);
+                }
+            }
+        }
+        // add edges
+        for (Map.Entry<String, List<Route>> rt : routes.entrySet()) {
+            for (Route route : rt.getValue()) {
+
+
+                if(!(route.Source_airport_ID.contains("\\")) && !(route.Destination_airport_ID.contains("\\"))
+                        && is_active_flight(route.Airline_ID)) {
+
+                    for (Airport airport : all_airports){
+                        if (airport.Airport_ID.equals(route.Source_airport_ID)){
+                            start_lat = Double.parseDouble(airport.Latitude);
+                            start_long = Double.parseDouble(airport.Longitude);
+                        }
+                    }
+                    for (Airport airport : all_airports){
+                        if (airport.Airport_ID.equals(route.Destination_airport_ID)){
+                            dest_lat = Double.parseDouble(airport.Latitude);
+                            dest_long = Double.parseDouble(airport.Longitude);
+                        }
+                    }
+                    Integer start_id = Integer.parseInt(route.Source_airport_ID);
+                    Integer dest_id = Integer.parseInt(route.Destination_airport_ID);
+
+
+
+                    double weight = distance(start_lat,start_long, dest_lat,dest_long);
+
+                    if (!start_id.equals(dest_id)) {
+                        graph.addEdge(start_id, dest_id,weight);
+                    }
+                }
+
+            }
+
+        }
+
+
+        // finding path from start to destination.
+        ArrayList<List<String>> trips  = new ArrayList<>();
+        for(int start_airport : airport_in_start_city ){
+            for (int dest_airport : airport_in_dest_city){
+                if (!trips.contains(graph.bfs(start_airport,dest_airport))){
+                    trips.add(graph.bfs(start_airport,dest_airport));
+                }
+            }
+        }
+
+
+        // Step 4 write to file
+        for (List<String> flight_path : trips){
+            if (valid_solution_path_found(flight_path,routes)){
+                try {
+                    PrintWriter outputStream =
+                            new PrintWriter( new FileOutputStream(start_city+"-"+dest_city+"_.txt"));
+                }catch (FileNotFoundException e){
+                    System.out.println("Error opening the file stuff.txt.");
+                    System.exit(0);
+                }
+        }
+
+
+        //  };
+
+
+
+
+
+
+
+
+
+
+    }
+}
+}
+
+
+
+
+// STEP 1: READ THE INPUT FILES AND PARSE
+// class objects to represent the data - done
+// THE DATA structure to store the csv files - collection? hash map done
+// read the input file
+// STEP 2: QUERY THE DATA FOR THE SPECIFIED INFORMATION
+// check if there is a direct flight - done
+// check if a sequence of flights produce a valid path - done
+// STEP 3: SHORTEST PATH ALGORITHM
+// create graph -
+//      adjecncy matrix
+//       node airport
+//       stops edges
+// djkistra for shorteest path
+
