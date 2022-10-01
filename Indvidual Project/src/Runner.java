@@ -458,7 +458,13 @@ public class Runner {
         airport_reader("airports.csv");
         airline_reader("airlines.csv");
         route_reader("routes.csv");
-        read_from_file("Accra-Winnipeg.txt");
+        
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Enter a file name: ");
+        System.out.println("Format (StartCity-DestCity.txt)");
+        System.out.flush();
+        String filename = scanner.nextLine();
+        read_from_file(filename);
 
 
         // Step 2: Query data for trip
